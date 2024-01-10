@@ -21,6 +21,41 @@
   <canvas id="gameCanvas" width="800" height="600"></canvas>
 
   <script>
+    // Define the Bullet class
+    // Load spaceship image
+    const spaceshipImage = new Image();
+    spaceshipImage.src = "ship-off.png";
+    const alternateSpaceshipImage = new Image();
+    alternateSpaceshipImage.src = "ship-on.png";
+
+    class Bullet {
+      constructor(x, y, dx, dy) {
+        this.x = x;
+        this.y = y;
+        this.dx = dx;
+        this.dy = dy;
+      }
+
+      update() {
+        this.x += this.dx;
+        this.y += this.dy;
+
+        // Check for collision with the walls and bounce
+        if (this.x < 0 || this.x > canvas.width) {
+          this.dx *= -1;
+        }
+        if (this.y < 0 || this.y > canvas.height) {
+          this.dy *= -1;
+        }
+      }
+
+      draw() {
+        ctx.fillStyle = 'white'; // Set the fill style to white
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, 5, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
 
     // Get a reference to the canvas and its context
     const canvas = document.getElementById('gameCanvas');
@@ -28,17 +63,7 @@
     canvas.height = window.innerHeight;
     const ctx = canvas.getContext('2d');
 
-    window.addEventListener('resize', function () {
-      canvas.width = window.innerWidth;
-      canvas.height = window.innerHeight;
-    });
-
-    // Load spaceship image
-    const spaceshipImage = new Image();
-    spaceshipImage.src = "ship-off.png";
-    const alternateSpaceshipImage = new Image();
-    alternateSpaceshipImage.src = "ship-on.png";
-
+    let bullets = [];
     let spaceship = {
       x: canvas.width / 2,
       y: canvas.height / 2,
@@ -50,6 +75,19 @@
       sprite: spaceshipImage,
       alternateSprite: alternateSpaceshipImage
     };
+    // Add a shoot function to the spaceship
+    spaceship.shoot = function () {
+      let bulletSpeed = 5;
+      let dx = bulletSpeed * Math.cos(this.rotation - Math.PI / 2);
+      let dy = bulletSpeed * Math.sin(this.rotation - Math.PI / 2);
+      let bullet = new Bullet(this.x, this.y, dx, dy);
+      bullets.push(bullet);
+    };
+
+    window.addEventListener('resize', function () {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    });
 
     let keys = {
       w: false,
@@ -79,7 +117,7 @@
       spaceship.targetRotation = keyToAngle[Object.keys(keys).filter(k => keys[k]).sort().join('')] || spaceship.rotation;
 
       // Determine the direction of rotation
-  let rotationDirection = spaceship.targetRotation > previousRotation ? 1 : -1;
+      let rotationDirection = spaceship.targetRotation > previousRotation ? 1 : -1;
 
       // If the space key is pressed, accelerate the spaceship
       if (e.key === ' ') {
@@ -93,6 +131,10 @@
         }
 
         spaceship.sprite = spaceship.alternateSprite;
+      }
+
+      if (event.key === 'Shift') {
+        spaceship.shoot();
       }
     });
 
@@ -115,8 +157,8 @@
       if (Math.abs(diff) > (Math.PI / 2)) rotateSpeed *= 2;
 
       spaceship.rotation += Math.sign(diff) * Math.min(Math.abs(diff), rotateSpeed);
-    } 
-    
+    }
+
     function gameLoop() {
       // Update the spaceship's position
       spaceship.x += spaceship.dx;
@@ -128,35 +170,43 @@
       // Prevent the spaceship from passing the canvas limit
       if (spaceship.x - spaceship.sprite.width / 2 < MARGIN) {
         spaceship.x = MARGIN + spaceship.sprite.width / 2;
-        spaceship.dx = 0;
+        spaceship.dx *= -0.1; // Add knockback effect
       }
       if (spaceship.y - spaceship.sprite.height / 2 < MARGIN) {
         spaceship.y = MARGIN + spaceship.sprite.height / 2;
-        spaceship.dy = 0;
+        spaceship.dy *= -0.1; // Add knockback effect
       }
       if (spaceship.x + spaceship.sprite.width / 2 > canvas.width - MARGIN) {
         spaceship.x = canvas.width - MARGIN - spaceship.sprite.width / 2;
-        spaceship.dx = 0;
+        spaceship.dx *= -0.1; // Add knockback effect
       }
       if (spaceship.y + spaceship.sprite.height / 2 > canvas.height - MARGIN) {
         spaceship.y = canvas.height - MARGIN - spaceship.sprite.height / 2;
-        spaceship.dy = 0;
+        spaceship.dy *= -0.1; // Add knockback effect
       }
-
 
 
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
       ctx.save();
- 
+
       ctx.translate(spaceship.x, spaceship.y);
 
       ctx.rotate(spaceship.rotation);
       ctx.drawImage(spaceship.sprite, -spaceship.sprite.width / 2, -spaceship.sprite.height / 2);
 
       ctx.restore();
-    
+
       updateSpaceship();
+
+      // Update and draw the bullets
+      bullets.forEach(bullet => {
+        bullet.update();
+        bullet.draw();
+      });
+
+
+
 
       requestAnimationFrame(gameLoop);
     }
