@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <title>Spaceship Game</title>
+  <style>
+    html,
+    body,
+    canvas {
+      margin: 0;
+      padding: 0;
+      background-color: black;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+    }
+  </style>
+</head>
+
+<body>
+  <canvas id="gameCanvas" width="800" height="600"></canvas>
+
+  <script>
+
+    // Get a reference to the canvas and its context
+    const canvas = document.getElementById('gameCanvas');
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+    const ctx = canvas.getContext('2d');
+
+    window.addEventListener('resize', function () {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    });
+
+    // Load spaceship image
+    const spaceshipImage = new Image();
+    spaceshipImage.src = "ship-off.png";
+    const alternateSpaceshipImage = new Image();
+    alternateSpaceshipImage.src = "ship-on.png";
+
+    let spaceship = {
+      x: canvas.width / 2,
+      y: canvas.height / 2,
+      dx: 0,
+      dy: 0,
+      rotation: 0,
+      targetRotation: 0,
+      rotateSpeed: Math.PI / 20, // Rotate 1 degree per frame
+      sprite: spaceshipImage,
+      alternateSprite: alternateSpaceshipImage
+    };
+
+    let keys = {
+      w: false,
+      a: false,
+      s: false,
+      d: false,
+    };
+
+    let keyToAngle = {
+      w: Math.PI * 2,
+      a: Math.PI * 1.5,
+      s: Math.PI,
+      d: Math.PI * 0.5,
+      aw: Math.PI * -0.25,
+      dw: Math.PI * 0.25,
+      as: Math.PI * 1.25,
+      ds: Math.PI * 0.75,
+    };
+
+    // Define the maximum speed
+    const MAX_SPEED = 10;
+
+    window.addEventListener('keydown', function (e) {
+      keys[e.key.toLowerCase()] = true;
+      let previousRotation = spaceship.rotation;
+
+      spaceship.targetRotation = keyToAngle[Object.keys(keys).filter(k => keys[k]).sort().join('')] || spaceship.rotation;
+
+      // Determine the direction of rotation
+  let rotationDirection = spaceship.targetRotation > previousRotation ? 1 : -1;
+
+      // If the space key is pressed, accelerate the spaceship
+      if (e.key === ' ') {
+        // Calculate the current speed
+        let currentSpeed = Math.sqrt(spaceship.dx * spaceship.dx + spaceship.dy * spaceship.dy);
+
+        // If the current speed is less than the maximum speed, accelerate the spaceship
+        if (currentSpeed < MAX_SPEED) {
+          spaceship.dx += Math.cos(spaceship.rotation - Math.PI / 2);
+          spaceship.dy += Math.sin(spaceship.rotation - Math.PI / 2);
+        }
+
+        spaceship.sprite = spaceship.alternateSprite;
+      }
+    });
+
+    window.addEventListener('keyup', function (e) {
+      keys[e.key.toLowerCase()] = false;
+      spaceship.targetRotation = keyToAngle[Object.keys(keys).filter(k => keys[k]).sort().join('')] || spaceship.rotation;
+
+      if (e.key === ' ') {
+        spaceship.sprite = spaceshipImage;
+      }
+    });
+
+    function updateSpaceship() {
+      let diff = spaceship.targetRotation - spaceship.rotation;
+      if (diff < -Math.PI) diff += Math.PI * 2;
+      if (diff > Math.PI) diff -= Math.PI * 2;
+
+      // If the difference is more than half a circle (180 degrees), rotate faster
+      let rotateSpeed = spaceship.rotateSpeed;
+      if (Math.abs(diff) > (Math.PI / 2)) rotateSpeed *= 2;
+
+      spaceship.rotation += Math.sign(diff) * Math.min(Math.abs(diff), rotateSpeed);
+    } 
+    
+    function gameLoop() {
+      // Update the spaceship's position
+      spaceship.x += spaceship.dx;
+      spaceship.y += spaceship.dy;
+
+      // Define the margin
+      const MARGIN = 10;
+
+      // Prevent the spaceship from passing the canvas limit
+      if (spaceship.x - spaceship.sprite.width / 2 < MARGIN) {
+        spaceship.x = MARGIN + spaceship.sprite.width / 2;
+        spaceship.dx = 0;
+      }
+      if (spaceship.y - spaceship.sprite.height / 2 < MARGIN) {
+        spaceship.y = MARGIN + spaceship.sprite.height / 2;
+        spaceship.dy = 0;
+      }
+      if (spaceship.x + spaceship.sprite.width / 2 > canvas.width - MARGIN) {
+        spaceship.x = canvas.width - MARGIN - spaceship.sprite.width / 2;
+        spaceship.dx = 0;
+      }
+      if (spaceship.y + spaceship.sprite.height / 2 > canvas.height - MARGIN) {
+        spaceship.y = canvas.height - MARGIN - spaceship.sprite.height / 2;
+        spaceship.dy = 0;
+      }
+
+
+
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      ctx.save();
+ 
+      ctx.translate(spaceship.x, spaceship.y);
+
+      ctx.rotate(spaceship.rotation);
+      ctx.drawImage(spaceship.sprite, -spaceship.sprite.width / 2, -spaceship.sprite.height / 2);
+
+      ctx.restore();
+    
+      updateSpaceship();
+
+      requestAnimationFrame(gameLoop);
+    }
+    spaceshipImage.onload = function () {
+      gameLoop();
+    };
+
+  </script>
+</body>
+
+</html>
